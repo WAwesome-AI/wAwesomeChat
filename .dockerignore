@@ -1,0 +1,39 @@
+# flyctl launch added from .gitignore
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+**/.venv
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.keystore
+**/*.jks
+**/secrets.toml
+**/.git
+**/.uv
+**/.uv_cache
+**/.pytest_cache
+**/.mypy_cache
+**/ruff_cache
+**/.DS_Store
+**/uv.lock
+**/src/wawesomechat/wapyt-99.99.99-py3-none-any.whl
+**/*/uv.lock
+**/*.db
+**/*.db-*
+**/*.sqlite
+**/*.sqlite3
+**/*.sqlite-*
+**/*.sqlite3-*
+
+# flyctl launch added from .venv/.gitignore
+.venv/**/*
+
+# flyctl launch added from .venv/lib/python3.13/site-packages/litellm/proxy/.gitignore
+.venv/lib/python3.13/site-packages/litellm/proxy/**/.env
+.venv/lib/python3.13/site-packages/litellm/proxy/**/secrets.toml
+fly.toml

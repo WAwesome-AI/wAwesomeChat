@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wawesomechat"
+version = "0.1.0"
+description = "Foundational scaffolding for the wAwesomeChat application built on wapyt's widgetset and pytincture."
+readme = "README.md"
+authors = [{ name = "wAwesomeChat Team" }]
+license = { text = "MIT" }
+requires-python = ">=3.13"
+dependencies = [
+    "wapyt==0.1.0",
+    "python-dotenv>=1.0",
+    "SQLAlchemy>=2.0",
+    "litellm>=1.52",
+    "boto3>=1.42.1",
+    "pytincture>=0.9.25",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5.5",
+]
+postgres = [
+    "psycopg[binary]>=3.2",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.uv]
+managed = true
+
+[tool.uv.sources]
+wapyt = { path = "../wA_pytincture_widgetset" }
+
