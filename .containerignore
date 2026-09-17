@@ -1,0 +1,64 @@
+# Build context is ~/Development/Pytinc (the parent), so these patterns are
+# written to match at any depth across all three copied repos.
+
+# VCS and editor noise
+**/.git
+**/.github
+**/.vscode
+**/.idea
+**/*.swp
+**/.DS_Store
+
+# Virtualenvs and caches -- these are host-specific (host Python is 3.14, the
+# image is 3.13) and would break `uv sync` if they leaked in.
+**/.venv
+**/venv
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+**/.uv
+**/.uv_cache
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/htmlcov
+**/.coverage
+
+# Build output
+**/build
+**/dist
+
+# Secrets. Credentials reach the container through `podman run --env-file`,
+# never baked into a layer -- an image layer is forever, and this image is not
+# something you want to push anywhere with keys in it.
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.keystore
+**/*.jks
+**/secrets.toml
+
+# Local databases -- the container gets its own on the /data volume.
+**/*.db
+**/*.db-*
+**/*.sqlite
+**/*.sqlite3
+**/*.sqlite-*
+**/*.sqlite3-*
+
+# Prebuilt dev wheels. Deliberately excluded: the image builds its own from the
+# widgetset source it actually copied in, so the asset manifest always matches.
+# (This is the one exclusion the old .dockerignore got right for the wrong
+# reason -- it excluded the wheel but never rebuilt one, so the image shipped
+# with no widgetset at all.)
+**/wapyt-*-py3-none-any.whl
+
+# Node, if the frontend build tooling is ever used from a checkout
+**/node_modules
+
+# Large vendored pieces that are NOT excludable: pytincture/frontend/pyodide is
+# 12 MB and is served to the browser at runtime. Do not add it here.
