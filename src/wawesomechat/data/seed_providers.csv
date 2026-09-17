@@ -4,3 +4,4 @@ anthropic,Anthropic,anthropic,,anthropic,"[""claude-sonnet-4-20250514"", ""claud
 openai,OpenAI,openai,,openai,"[""gpt-5"", ""gpt-5-mini"", ""o4-mini"", ""gpt-4o-mini"", ""gpt-4o"", ""o3"", ""o3-mini"", ""chatgpt-4o-latest"", ""gpt-3.5-turbo""]","{""OPENAI_API_KEY"": ""api_key""}"
 google,Google Vertex,google,,google,"[""gemini-2.5-pro-preview-03-25"", ""gemini-2.0-flash"", ""gemini-2.0-flash-thinking-exp-01-21""]","{""GEMINI_API_KEY"": ""api_key""}"
 xai,xAI,xai,,xai,"[""xai/grok-2-1212"", ""xai/grok-2-vision-1212"", ""xai/grok-3"", ""xai/grok-3-mini"", ""xai/grok-4-0709"", ""xai/grok-4-fast-non-reasoning"", ""xai/grok-4-fast-reasoning"", ""xai/grok-code-fast-1"", ""xai/grok-2-image-1212""]","{""XAI_API_KEY"": ""api_key""}"
+lm_studio,LM Studio (local),lm_studio,,lm_studio,"[""google/gemma-4-e4b"", ""google/gemma-4-12b-qat"", ""qwen/qwen3.6-27b""]","{""LM_STUDIO_API_BASE"": ""api_base"", ""LM_STUDIO_API_KEY"": ""api_key""}"
