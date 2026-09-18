@@ -81,10 +81,10 @@ RUN mkdir -p /app/models/whisper && \
 from faster_whisper import WhisperModel; \
 WhisperModel('base.en', device='cpu', compute_type='int8', download_root='/app/models/whisper')"
 
-# pytincture ships Permissions-Policy: microphone=() -- a browser-level block on
-# getUserMedia that no amount of user consent overrides. Voice input needs it
-# relaxed to self. Everything else stays denied.
-ENV PYTINCTURE_PERMISSIONS_POLICY="camera=(), microphone=(self), geolocation=(), payment=()"
+# pytincture denies device access by default -- Permissions-Policy: microphone=()
+# is a browser-level block that no amount of user consent overrides. Opting in is
+# per feature (pytincture >= 1.0.0rc8); camera, geolocation and payment stay denied.
+ENV PYTINCTURE_ALLOW_MICROPHONE=1
 
 # SQLite lives on a volume so provider records and (once persistence is fixed)
 # transcripts survive `podman rm`. WA_DB_FILE is absolute, so config.py uses it

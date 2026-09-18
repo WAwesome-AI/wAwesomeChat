@@ -242,7 +242,7 @@ drag all of that back in.
 stt.py          @backend_for_frontend -- faster-whisper base.en, CPU int8
 chat.py         handle_voice() -> _transcribe() -> apply_transcript(submit=continuous)
 Containerfile   bakes the model at /app/models/whisper (141MB) and sets
-                PYTINCTURE_PERMISSIONS_POLICY to allow microphone=(self)
+                PYTINCTURE_ALLOW_MICROPHONE=1
 ```
 
 Adapted from `~/Development/ai_ecosystem/companion/services/stt.py`, which solved this first.
@@ -262,10 +262,11 @@ so the browser's WebM/Opus decodes with no system codec.
 minutes of Opus, and the widget caps a take at `voice_max_seconds` anyway. Raise the env var if
 that ever bites.
 
-**The blocker to remember:** pytincture ships `Permissions-Policy: microphone=()`, which blocks
-`getUserMedia` outright. The Containerfile sets `PYTINCTURE_PERMISSIONS_POLICY` to allow
-`microphone=(self)`. Running outside the container, export it yourself or the mic button disables
-itself. `http://127.0.0.1` is a secure context; `http://<lan-ip>` is not.
+**The blocker to remember:** pytincture denies device access by default, and
+`Permissions-Policy: microphone=()` blocks `getUserMedia` outright regardless of user consent. The
+Containerfile sets **`PYTINCTURE_ALLOW_MICROPHONE=1`**; running outside the container, export it
+yourself or the mic button disables itself. (Before 1.0.0rc8 this was a raw header string in
+`PYTINCTURE_PERMISSIONS_POLICY`; the shipped API is one boolean per feature.) `http://127.0.0.1` is a secure context; `http://<lan-ip>` is not.
 
 Image cost: ~446MB → **969MB** (ctranslate2 + PyAV + the model). The documented escape hatch, if
 this ever needs to shrink or go faster, is a GPU whisper container on `ai-net` with `WHISPER_*`
