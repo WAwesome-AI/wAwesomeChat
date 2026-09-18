@@ -45,6 +45,14 @@ except Exception:  # pragma: no cover - optional in non-Pyodide environments
     ProviderAdminBackend = None
 
 try:
+    from stt import stt as SttBackend
+except Exception as exc:  # pragma: no cover - faster-whisper is optional
+    SttBackend = None
+    _STT_IMPORT_ERROR = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+else:
+    _STT_IMPORT_ERROR = None
+
+try:
     from storage import ChatStorage as _ChatStorage
 except Exception as exc:  # pragma: no cover - SQLAlchemy optional in Pyodide
     ChatStorage = None
@@ -235,6 +243,15 @@ if _STORAGE_IMPORT_ERROR:
     )
 
 
+# pytincture discovers the browser entrypoint by AST, and its MainWindow-subclass
+# detection (backend/pages.py:_main_window_base_names) only recognizes
+# `dhxpyt.layout.MainWindow` -- it never matches a wapyt base. The remaining
+# fallback is the convention "top-level name == module name", which `chat.py` /
+# `WAwesomeChat` does not satisfy. Declare it explicitly or startup fails with
+# HTTP 422 before any Python reaches the browser.
+APP_ENTRYPOINT = "WAwesomeChat"
+
+
 class WAwesomeChat(MainWindow):
     layout_config = LayoutConfig(rows=[CellConfig(id="tabs", grow=1)])
 
@@ -250,10 +267,14 @@ class WAwesomeChat(MainWindow):
         self._history_buffer: List[ChatMessageConfig] = []
         self._openai_proxy: Optional[Any] = None  # type: ignore[name-defined]
         self._system_prompt = SYSTEM_PROMPT
+        # os.getenv is useless here: in Pyodide the environment is empty, so this
+        # only ever returned the literal fallback. The real value lives on the
+        # server and arrives via the proxy BFF in _ensure_proxy().
         self._default_model = os.getenv("CHAT_DEMO_DEFAULT_MODEL", "gpt-4o-mini")
         self._provider_schemas = copy.deepcopy(DEFAULT_PROVIDER_SCHEMAS)
         self._provider_snapshot = None
         self._provider_backend = ProviderAdminBackend() if ProviderAdminBackend else None
+        self._stt_backend = SttBackend() if SttBackend else None
         self._base_catalog = self._base_provider_catalog()
         self._default_catalog = self._normalize_provider_catalog(self._base_catalog)
         self._models = self._build_initial_models(self._default_catalog)
@@ -364,6 +385,24 @@ class WAwesomeChat(MainWindow):
                 agent=agent,
                 messages=initial_messages,
                 storage_key="wawesomechat",
+                # Seed the selector from WA_DEFAULT_MODEL on a first visit. The
+                # widget remembers the last explicit pick in localStorage and
+                # prefers that; without either it would land on whatever happens
+                # to be first in the catalogue (AWS Bedrock).
+                default_model=self._default_model,
+                # Push-to-talk. The widget only records; _handle_voice() below
+                # sends the clip to the stt BFF and drops the transcript into the
+                # composer. Requires Permissions-Policy: microphone=(self) --
+                # pytincture blocks the mic by default, see the Containerfile.
+                voice_input=True,
+                voice_max_seconds=120,
+                # Second, latching mic: an open-mic loop that segments speech on
+                # silence and submits each utterance. With no TTS in this app
+                # there is no playback to echo into the gate, so none of
+                # Pantheon's half-duplex machinery is needed.
+                voice_continuous=True,
+                vad_threshold=0.015,
+                vad_silence_ms=800,
                 layout_mode="advanced",
                 layout_density="comfortable",
                 auto_append_user_messages=False,
@@ -371,6 +410,8 @@ class WAwesomeChat(MainWindow):
             ),
         )
         self._chat_widget.on_send(self.handle_send)
+        self._chat_widget.on_voice(self.handle_voice)
+        self._chat_widget.on_voice_error(self.handle_voice_error)
         admin_layout = Layout(
             LayoutConfig(
                 rows=[
@@ -937,7 +978,11 @@ class WAwesomeChat(MainWindow):
             description="Add or select a provider to manage its models.",
             add_button_text="Add Provider",
             viewport_height=CARD_SECTION_VIEWPORT,
-            card_columns=max(5, len(self._providers)),
+            # No card_columns: let the panel auto-fill at --card-min-width and wrap
+            # to a second row. This used to be max(5, len(self._providers)), which
+            # demanded one column per provider -- so every provider added made every
+            # card narrower, and past five the cards were too small for their own
+            # Select/Edit/Delete buttons.
             card_min_height=120,
             card_height=150,
             card_gap=12,
@@ -1518,6 +1563,14 @@ class WAwesomeChat(MainWindow):
             self._openai_proxy = None
         else:
             self._log(logging.INFO, "MultiAI proxy initialised successfully")
+            try:
+                backend_default = self._openai_proxy.get_default_model()
+            except Exception as exc:  # pragma: no cover - diagnostics only
+                self._log(logging.DEBUG, f"No backend default model available: {exc}")
+            else:
+                if backend_default:
+                    self._default_model = backend_default
+                    self._log(logging.INFO, f"Default model from backend: {backend_default}")
 
     def _init_storage(self):
         if ChatStorage is None:
@@ -1901,6 +1954,66 @@ class WAwesomeChat(MainWindow):
         form.addEventListener("submit", create_proxy(submit_handler))
         cancel.addEventListener("click", create_proxy(lambda *_: self._user_modal.hide()))
         self._user_modal.show()
+
+    def handle_voice(self, payload):
+        """Transcribe a push-to-talk clip and put the text in the composer."""
+        if not payload or not self._chat_widget:
+            return
+        audio = payload.get("audio")
+        if not audio:
+            return
+        self._log(
+            logging.INFO,
+            f"Voice clip received: {payload.get('bytes')} bytes, "
+            f"{payload.get('durationMs')}ms, {payload.get('mimeType')}",
+        )
+        if self._stt_backend is None:
+            self._chat_widget.set_composer_text(
+                "[speech-to-text unavailable on the server]"
+            )
+            self._log(
+                logging.WARNING,
+                f"STT backend unavailable.\n{_STT_IMPORT_ERROR or 'faster-whisper is not installed'}",
+            )
+            return
+        # Transcription is a blocking model call on the server; keep it off the
+        # UI path. asyncio.run would close the WebLoop for the whole session.
+        asyncio.ensure_future(self._transcribe(payload))
+
+    async def _transcribe(self, payload):
+        try:
+            result = self._stt_backend.transcribe(payload)
+        except Exception as exc:  # pragma: no cover - diagnostics only
+            self._log(logging.ERROR, f"Transcription call failed: {exc}\n{_format_exception(exc)}")
+            return
+        if hasattr(result, "to_py"):
+            result = result.to_py()
+        if not isinstance(result, dict):
+            self._log(logging.WARNING, f"Unexpected STT result: {result!r}")
+            return
+        if result.get("error"):
+            self._log(logging.WARNING, f"STT error: {result['error']}")
+            return
+        text = (result.get("text") or "").strip()
+        if not text:
+            self._log(logging.INFO, "Transcription produced no text (silence?)")
+            return
+        continuous = bool(payload.get("continuous"))
+        self._log(
+            logging.INFO,
+            f"Transcribed {result.get('bytes')} bytes -> {len(text)} chars"
+            f"{' (continuous, auto-submitting)' if continuous else ''}",
+        )
+        # Hands-free submits each utterance, the way Pantheon does -- the whole
+        # point is not touching the keyboard. Hold-to-talk deliberately does not:
+        # you are already at the keyboard, so a misheard word is easier to fix
+        # before it reaches the model than after.
+        self._chat_widget.apply_transcript(text, submit=continuous)
+
+    def handle_voice_error(self, payload):
+        detail = (payload or {}).get("error") or "unknown error"
+        name = (payload or {}).get("name") or ""
+        self._log(logging.WARNING, f"Microphone unavailable ({name}): {detail}")
 
     def handle_send(self, payload):
         """

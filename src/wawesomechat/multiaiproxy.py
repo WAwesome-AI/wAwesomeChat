@@ -22,7 +22,9 @@ except ImportError:
 load_dotenv()
 litellm._turn_on_debug()
 
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
+# WA_DEFAULT_MODEL is the documented setting (.env.example, config.py, README);
+# DEFAULT_MODEL is kept as a fallback for older environments.
+DEFAULT_MODEL = os.getenv("WA_DEFAULT_MODEL") or os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
 REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "60"))
 
 def _parse_config(raw):
@@ -331,6 +333,14 @@ class multiaiproxy:
         for slug, models in providers_cfg.items():
             serialized.append({"slug": slug, "models": models, "title": slug, "service": slug, "type": slug})
         return serialized
+
+    def get_default_model(self):
+        """The model the UI should select before the user has picked one.
+
+        Browser-side code cannot read this from the environment -- os.environ is
+        empty in Pyodide -- so it has to come across the BFF boundary.
+        """
+        return self._default_model
 
     def get_available_models(self):
         return (self._provider_config or DEFAULT_PROVIDER_CONFIG).get("providers", {})

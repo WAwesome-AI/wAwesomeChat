@@ -8,7 +8,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # pragma: no cover - Pyodide: no filesystem .env to read
+    # This module is imported in the browser too (chat.py -> config, and via
+    # provider_catalog for the UI's default catalog). python-dotenv is a
+    # server-side convenience with nothing to do there, so degrade to a no-op
+    # rather than forcing a pointless micropip install. load_environment()
+    # already guards on the file existing.
+    def load_dotenv(*_args, **_kwargs):  # type: ignore[misc]
+        return False
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = PACKAGE_ROOT.parent
