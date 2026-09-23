@@ -415,8 +415,14 @@ class WAwesomeChat(MainWindow):
         admin_layout = Layout(
             LayoutConfig(
                 rows=[
-                    CellConfig(id="provider_cards", header="Providers", height="260px"),
-                    CellConfig(id="provider_models", header="Models", height="260px"),
+                    # Share the tab rather than pinning a height. 260px was
+                    # never enough for the section chrome plus a
+                    # CARD_SECTION_VIEWPORT-tall card area (~95px + 220px), so
+                    # the cards clipped as soon as wapyt started honouring
+                    # declared cell sizes; before that the value was discarded
+                    # and the cell grew to fit by accident.
+                    CellConfig(id="provider_cards", header="Providers", grow=1),
+                    CellConfig(id="provider_models", header="Models", grow=1),
                 ],
                 borderless=True,
                 gap="6px",
