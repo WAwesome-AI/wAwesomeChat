@@ -206,9 +206,10 @@ the old state.
 - **`app.py` does not exist.** `launch_app` and `get_modules_path` are therefore `None`, and the
   README's `uv run python -c "...launch_app()"` fails. The real entrypoint is `chat.py`'s
   `__main__` block.
-- **Version pins are three-way inconsistent**: README says `pytincture==0.9.22`, `pyproject.toml`
-  says `pytincture>=0.9.25`, the local checkout is `1.0.0rc5`. The uv source override papers over
-  this; the declared pin is still wrong.
+- ✅ **pytincture version pins** — were three-way inconsistent (README `==0.9.22`, pyproject
+  `>=0.9.25`, checkout `1.0.0rc5`). Since 2026-10-18 all agree on **1.0.0** (final, on PyPI):
+  `pyproject.toml` says `pytincture>=1.0.0`, the README matches, and the local `../pytincture`
+  checkout is v1.0.0. The `path` source stays — the container build installs the sibling clone.
 - **Port mismatch**: `Dockerfile` sets `PORT=8080` and `EXPOSE 8080`; `fly.toml` sets `PORT=8070`
   and `internal_port = 8070`.
 - **The container cannot run as built**: `.dockerignore` excludes both `.env` and the wapyt dev

@@ -1,7 +1,7 @@
 # wAwesomeChat
 
 Foundational scaffolding for the wAwesomeChat experience powered by `wapyt==0.1.0`,
-`pytincture==0.9.22`, and a LiteLLM-backed backend-for-frontend proxy.
+`pytincture>=1.0.0`, and a LiteLLM-backed backend-for-frontend proxy.
 
 The repository now ships:
 
@@ -21,7 +21,7 @@ The repository now ships:
 - Python 3.13+ (wapyt enforces 3.13, so pin it in uv).
 - Local sibling clones for the framework dependencies:
   - `../wA_pytincture_widgetset` (exports `wapyt==0.1.0`).
-  - `../pytincture` (exports `pytincture==0.9.22`).
+  - `../pytincture` (exports `pytincture` 1.0.0).
 - [`uv`](https://github.com/astral-sh/uv) for dependency management.
 - `.env` file based on `.env.example` for API keys and database settings.
 
