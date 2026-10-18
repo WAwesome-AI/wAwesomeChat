@@ -16,7 +16,7 @@ dependencies = [
     "SQLAlchemy>=2.0",
     "litellm>=1.52",
     "boto3>=1.42.1",
-    "pytincture>=0.9.25",
+    "pytincture>=1.0.0",
     # Local speech-to-text. Pulls ctranslate2 + PyAV (which bundles ffmpeg, so
     # the browser's WebM/Opus decodes without a system codec).
     "faster-whisper>=1.0",
@@ -46,8 +46,8 @@ managed = true
 
 [tool.uv.sources]
 wapyt = { path = "../wa_pytincture_widgetset" }
-# Develop against the local checkout (1.0.0rc5). A bare ">=" pin would not select
-# a pre-release from PyPI, so without this the app silently resolves an older
-# published pytincture than the one the widgetset is being built against.
+# Develop against the local sibling checkout (v1.0.0). The container build
+# installs pytincture from this clone, so keep the path source even though
+# 1.0.0 final is on PyPI.
 pytincture = { path = "../pytincture" }
 
